@@ -1,65 +1,143 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import SearchBar from "@/components/SearchBar";
+import { ImageGrid } from "@/components/ImageGrid";
+import { ImageModal } from "@/components/ImageModal";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import type { UnsplashImage, UnsplashSearchResponse } from "@/types"; 
+
+const Home = () => {
+  const [images, setImages] = useState<UnsplashImage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<UnsplashImage | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("nature");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const searchImages = async (query: string, page: number = 1) => {
+    if (!query.trim()) return;
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(
+          query
+        )}&page=${page}&per_page=20&client_id=${
+          process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY
+        }`
+      );
+      if (!response.ok) throw new Error("Failed to fetch images");
+
+      const data: UnsplashSearchResponse = await response.json();
+
+      if (page === 1) {
+        setImages(data.results); // Reset images on new search
+      } else {
+        setImages((prev) => [...prev, ...data.results]); // Append more images
+      }
+
+      setTotalPages(data.total_pages);
+      setCurrentPage(page); // Update current page correctly
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    searchImages(query, 1);
+  };
+
+  const loadMore = () => {
+    if (!loading && currentPage < totalPages) {
+      searchImages(searchQuery, currentPage + 1);
+    }
+  };
+
+  const handleImageClick = (image: UnsplashImage) => setSelectedImage(image);
+  const closeModal = () => setSelectedImage(null);
+
+  // Initial load
+  useEffect(() => {
+    searchImages(searchQuery, 1);
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    <>
+      <div
+        className="fixed inset-0 z-0"
+        style={{
+          background: `linear-gradient(to bottom, #a0d2eb, #e5eaf5, #d0bdf4, #8458B3, #a28089)`,
+        }}
+      ></div>
+      <main className="relative z-10 min-h-screen mt-15">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold text-gray-800 mb-4">
+              Image Search
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover millions of high-quality, free images from photographers
+              around the world.
+            </p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-12 ">
+            <SearchBar onSearch={handleSearch} loading={loading} />
+          </div>
+
+          {/* Loading State */}
+          {loading && images.length === 0 && (
+            <div className="flex justify-center py-20">
+              <LoadingSpinner size="lg" text="Searching images..." />
+            </div>
+          )}
+
+          {/* Image Grid */}
+          {images.length > 0 && (
+            <>
+              <ImageGrid
+                images={images}
+                loading={loading}
+                onImageClick={handleImageClick}
+              />
+
+              {/* Load More Button */}
+              {currentPage < totalPages && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    className="rounded-sm px-6 py-2 font-medium bg-indigo-500 text-white w-fit transition-all shadow-[3px_3px_0px_black] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+                    onClick={loadMore}
+                    disabled={loading}
+                    // className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "Loading..." : "Load More Images"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Image Modal */}
+          <ImageModal
+            image={selectedImage}
+            isOpen={!!selectedImage}
+            onClose={closeModal}
+          />
+
+          {/* Back to Top Button */}
+         
         </div>
       </main>
-    </div>
+    </>
   );
-}
+};
+
+export default Home;
