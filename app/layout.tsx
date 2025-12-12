@@ -7,6 +7,14 @@ export const metadata: Metadata = {
   title: "Image Search",
   description: "Search and discover beautiful images from Unsplash",
   keywords: "unsplash, images, search, photography, free images",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" }, // main favicon
+      { url: "/favicon.svg", type: "image/svg+xml" }, // optional SVG
+    ],
+    shortcut: [{ url: "/favicon.png" }], // works in most browsers
+    apple: [{ url: "/favicon.png" }], // iOS
+  },
 };
 
 export default function RootLayout({
